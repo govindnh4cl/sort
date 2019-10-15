@@ -89,24 +89,25 @@ class KalmanBoxTracker(object):
         KalmanBoxTracker.static_count += 1
 
         # define constant velocity model
-        self.kf = KalmanFilter(dim_x=7, dim_z=4)
+        self.kf = KalmanFilter(dim_x=8, dim_z=4)
 
         # State transition matrix
         self.kf.F = np.array(
-            [[1, 0, 0, 0, 1, 0, 0],
-             [0, 1, 0, 0, 0, 1, 0],
-             [0, 0, 1, 0, 0, 0, 1],
-             [0, 0, 0, 1, 0, 0, 0],
-             [0, 0, 0, 0, 1, 0, 0],
-             [0, 0, 0, 0, 0, 1, 0],
-             [0, 0, 0, 0, 0, 0, 1]])
+            [[1, 0, 0, 0, 1, 0, 0, 0],
+             [0, 1, 0, 0, 0, 1, 0, 0],
+             [0, 0, 1, 0, 0, 0, 1, 0],
+             [0, 0, 0, 1, 0, 0, 0, 1],
+             [0, 0, 0, 0, 1, 0, 0, 0],
+             [0, 0, 0, 0, 0, 1, 0, 0],
+             [0, 0, 0, 0, 0, 0, 1, 0],
+             [0, 0, 0, 0, 0, 0, 0, 1]])
 
         # Measurement function
         self.kf.H = np.array(
-            [[1, 0, 0, 0, 0, 0, 0],
-             [0, 1, 0, 0, 0, 0, 0],
-             [0, 0, 1, 0, 0, 0, 0],
-             [0, 0, 0, 1, 0, 0, 0]])
+            [[1, 0, 0, 0, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0, 0, 0],
+             [0, 0, 1, 0, 0, 0, 0, 0],
+             [0, 0, 0, 1, 0, 0, 0, 0]])
 
         # measurement uncertainty/noise
         self.kf.R[2:, 2:] *= 10.
@@ -115,8 +116,9 @@ class KalmanBoxTracker(object):
         self.kf.P[4:, 4:] *= 1000.  # give high uncertainty to the unobservable initial velocities
         self.kf.P *= 10.
         # Process uncertainty/noise
-        self.kf.Q[-1, -1] *= 0.01
         self.kf.Q[4:, 4:] *= 0.01
+        self.kf.Q[-1, -1] *= 0.01
+        self.kf.Q[-2, -2] *= 0.01
 
         # filter state estimate
         self.kf.x[:4] = convert_bbox_to_z(bbox)
