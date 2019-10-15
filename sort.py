@@ -80,20 +80,18 @@ class KalmanBoxTracker(object):
     This class represents the internel state of individual tracked objects observed as bbox.
     """
     static_count = 0  # Static variable to keep a count on number of internal IDs used so far
-    static_object_id = 0  # Static variable to keep a count on number of acknowledged IDs used so far
 
     def __init__(self, bbox):
         """
         Initialises a tracker using initial bounding box.
         """
         self.tracker_id = KalmanBoxTracker.static_count  # Tracker's ID
-        self.object_id = None  # Object's ID. Is None if object is not yet acknowledged as valid
-        self.acknowledged = False
         KalmanBoxTracker.static_count += 1
 
         # define constant velocity model
         self.kf = KalmanFilter(dim_x=7, dim_z=4)
 
+        # State transition matrix
         self.kf.F = np.array(
             [[1, 0, 0, 0, 1, 0, 0],
              [0, 1, 0, 0, 0, 1, 0],
@@ -103,28 +101,29 @@ class KalmanBoxTracker(object):
              [0, 0, 0, 0, 0, 1, 0],
              [0, 0, 0, 0, 0, 0, 1]])
 
+        # Measurement function
         self.kf.H = np.array(
             [[1, 0, 0, 0, 0, 0, 0],
              [0, 1, 0, 0, 0, 0, 0],
              [0, 0, 1, 0, 0, 0, 0],
              [0, 0, 0, 1, 0, 0, 0]])
 
+        # measurement uncertainty/noise
         self.kf.R[2:, 2:] *= 10.
+        # covariance matrix
+        # P is already an eye matrix
         self.kf.P[4:, 4:] *= 1000.  # give high uncertainty to the unobservable initial velocities
         self.kf.P *= 10.
+        # Process uncertainty/noise
         self.kf.Q[-1, -1] *= 0.01
         self.kf.Q[4:, 4:] *= 0.01
 
+        # filter state estimate
         self.kf.x[:4] = convert_bbox_to_z(bbox)
         # Count of past consecutive frames for which detected box didn't match with this tracker
 
         self.count_successive_drops = 0  # Count of past successive frames where no update() was performed
         self.count_updates = 0  # Total number of update() performed on this tracker
-
-    def acknowledge_object(self):
-        self.acknowledged = True
-        self.object_id = KalmanBoxTracker.static_object_id
-        KalmanBoxTracker.static_object_id += 1
 
     def update_with_box(self, bbox):
         """
@@ -132,6 +131,7 @@ class KalmanBoxTracker(object):
         Updates the state vector with observed bbox.
         """
         self.count_updates += 1
+        self.count_successive_drops = 0  # Reset since the succession is broken
         self.kf.update(convert_bbox_to_z(bbox))
 
     def update_without_box(self):
